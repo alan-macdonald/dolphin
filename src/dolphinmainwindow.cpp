@@ -189,11 +189,11 @@ DolphinMainWindow::DolphinMainWindow()
     connect(m_actionHandler, &DolphinViewActionHandler::selectionModeChangeTriggered, this, &DolphinMainWindow::slotSetSelectionMode);
 
     QAction *newDirAction = actionCollection()->action(QStringLiteral("create_dir"));
-    Q_CHECK_PTR(newDirAction);
+    Q_ASSERT(newDirAction);
     m_newFileMenu->setNewFolderShortcutAction(newDirAction);
 
     QAction *newFileAction = actionCollection()->action(QStringLiteral("create_file"));
-    Q_CHECK_PTR(newFileAction);
+    Q_ASSERT(newFileAction);
     m_newFileMenu->setNewFileShortcutAction(newFileAction);
 
     m_remoteEncoding = new DolphinRemoteEncoding(this, m_actionHandler);
@@ -256,12 +256,14 @@ DolphinMainWindow::DolphinMainWindow()
 
     QTimer::singleShot(0, this, &DolphinMainWindow::updateOpenPreferredSearchToolAction);
 
-    m_fileItemActions.setParentWidget(this);
-    connect(&m_fileItemActions, &KFileItemActions::error, this, [this](const QString &errorMessage) {
-        showErrorMessage(errorMessage);
-    });
+    setupFileItemActions();
 
+    m_serviceMenuConfigWatcher = KConfigWatcher::create(KSharedConfig::openConfig(QStringLiteral("kservicemenurc")));
+    connect(m_serviceMenuConfigWatcher.data(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup & /*group*/, const QByteArrayList & /*names*/) {
+        setupFileItemActions();
+    });
     connect(GeneralSettings::self(), &GeneralSettings::splitViewChanged, this, &DolphinMainWindow::slotSplitViewChanged);
+    connect(GeneralSettings::self(), &GeneralSettings::tabBarChanged, this, &DolphinMainWindow::slotTabBarChanged);
 }
 
 DolphinMainWindow::~DolphinMainWindow()
@@ -270,7 +272,7 @@ DolphinMainWindow::~DolphinMainWindow()
     disconnect(QGuiApplication::clipboard(), &QClipboard::dataChanged, this, &DolphinMainWindow::updatePasteAction);
 
     // This fixes a crash in dolphinmainwindowtest where the connection below fires even though the KMainWindow destructor of this object is already running.
-    Q_CHECK_PTR(qobject_cast<DolphinDockWidget *>(m_placesPanel->parent()));
+    Q_ASSERT(qobject_cast<DolphinDockWidget *>(m_placesPanel->parent()));
     disconnect(static_cast<DolphinDockWidget *>(m_placesPanel->parent()),
                &DolphinDockWidget::visibilityChanged,
                this,
@@ -525,6 +527,12 @@ void DolphinMainWindow::slotSplitViewChanged()
 {
     m_tabWidget->currentTabPage()->setSplitViewEnabled(GeneralSettings::splitView(), WithAnimation);
     updateSplitActions();
+}
+
+void DolphinMainWindow::slotTabBarChanged()
+{
+    m_tabWidget->setTabBarAutoHide(!GeneralSettings::alwaysShowTabBar());
+    m_tabWidget->tabBar()->setTabsClosable(GeneralSettings::showCloseButtonOnTabs());
 }
 
 void DolphinMainWindow::openInNewTab()
@@ -1541,7 +1549,7 @@ void DolphinMainWindow::slotWriteStateChanged(bool isFolderWritable)
 
 void DolphinMainWindow::openContextMenu(const QPoint &pos, const KFileItem &item, const KFileItemList &selectedItems, const QUrl &url)
 {
-    QPointer<DolphinContextMenu> contextMenu = new DolphinContextMenu(this, item, selectedItems, url, &m_fileItemActions);
+    QPointer<DolphinContextMenu> contextMenu = new DolphinContextMenu(this, item, selectedItems, url, m_fileItemActions);
     contextMenu->exec(pos);
 
     // Delete the menu, unless it has been deleted in its own nested event loop already.
@@ -2591,6 +2599,19 @@ void DolphinMainWindow::setupDockWidgets()
     });
 }
 
+void DolphinMainWindow::setupFileItemActions()
+{
+    if (m_fileItemActions) {
+        delete m_fileItemActions;
+    }
+
+    m_fileItemActions = new KFileItemActions(this);
+    m_fileItemActions->setParentWidget(this);
+    connect(m_fileItemActions, &KFileItemActions::error, this, [this](const QString &errorMessage) {
+        showErrorMessage(errorMessage);
+    });
+}
+
 void DolphinMainWindow::updateFileAndEditActions()
 {
     const KFileItemList list = m_activeViewContainer->view()->selectedItems();
@@ -2743,6 +2764,7 @@ void DolphinMainWindow::updateGoActions()
 
 void DolphinMainWindow::refreshViews()
 {
+    setupFileItemActions();
     m_tabWidget->refreshViews();
 
     if (GeneralSettings::modifiedStartupSettings()) {
