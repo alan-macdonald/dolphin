@@ -35,6 +35,17 @@ public:
      */
     void selectAll();
 
+    /**
+     * Append text to the current filter.
+     */
+    void appendToFilter(const QString& text);
+
+    /*
+     * Controls whether the filter bar should close immediately on escape, or should
+     * first check if it contains any text and clear that first.
+     */
+    void setCloseOnEscape(bool enabled);
+
 public Q_SLOTS:
     /** Clears the input field. */
     void clear();
@@ -60,9 +71,15 @@ Q_SIGNALS:
      */
     void focusViewRequest();
 
+    /*
+     * Request navigation in the view (up/down cursor keys).
+    */
+    void navigateInViewRequested(int key, Qt::KeyboardModifiers modifiers);
+
 protected:
     void showEvent(QShowEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
     /** @see AnimatedHeightWidget::preferredHeight() */
     int preferredHeight() const override;
@@ -70,6 +87,7 @@ protected:
 private:
     QLineEdit *m_filterInput;
     QToolButton *m_lockButton;
+    bool m_closeOnEscape = false;
 };
 
 #endif

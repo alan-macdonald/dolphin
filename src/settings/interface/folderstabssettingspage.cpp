@@ -40,6 +40,7 @@ FoldersTabsSettingsPage::FoldersTabsSettingsPage(QWidget *parent)
     , m_openNewTabAfterCurrentTab(nullptr)
     , m_splitView(nullptr)
     , m_filterBar(nullptr)
+    , m_filterAsYouType(nullptr)
     , m_showFullPathInTitlebar(nullptr)
     , m_openExternallyCalledFolderInNewTab(nullptr)
     , m_useTabForSplitViewSwitch(nullptr)
@@ -113,6 +114,8 @@ FoldersTabsSettingsPage::FoldersTabsSettingsPage(QWidget *parent)
     topLayout->addRow(windowLabel, m_showFullPathInTitlebar);
     m_filterBar = new QCheckBox(i18nc("@option:check Window Startup Settings", "Show filter bar"));
     topLayout->addRow(QString(), m_filterBar);
+    m_filterAsYouType = new QCheckBox(i18nc("@option:check Window Startup Settings", "Filter as you type"));
+    topLayout->addRow(QString(), m_filterAsYouType);
 
     topLayout->addItem(new QSpacerItem(0, Dolphin::VERTICAL_SPACER_HEIGHT, QSizePolicy::Fixed, QSizePolicy::Fixed));
 
@@ -157,6 +160,7 @@ FoldersTabsSettingsPage::FoldersTabsSettingsPage(QWidget *parent)
 
     connect(m_splitView, &QCheckBox::toggled, this, &FoldersTabsSettingsPage::slotSettingsChanged);
     connect(m_filterBar, &QCheckBox::toggled, this, &FoldersTabsSettingsPage::slotSettingsChanged);
+    connect(m_filterAsYouType, &QRadioButton::toggled, this, &FoldersTabsSettingsPage::slotSettingsChanged);
 
     connect(m_openExternallyCalledFolderInNewTab, &QCheckBox::toggled, this, &FoldersTabsSettingsPage::slotSettingsChanged);
     connect(m_showFullPathInTitlebar, &QCheckBox::toggled, this, &FoldersTabsSettingsPage::slotSettingsChanged);
@@ -206,6 +210,7 @@ void FoldersTabsSettingsPage::applySettings()
     settings->setRememberOpenedTabs(m_rememberOpenedTabsRadioButton->isChecked());
     settings->setSplitView(m_splitView->isChecked());
     settings->setFilterBar(m_filterBar->isChecked());
+    settings->setFilterAsYouType(m_filterAsYouType->isChecked());
     settings->setOpenExternallyCalledFolderInNewTab(m_openExternallyCalledFolderInNewTab->isChecked());
     settings->setShowFullPathInTitlebar(m_showFullPathInTitlebar->isChecked());
 
@@ -282,6 +287,7 @@ void FoldersTabsSettingsPage::loadSettings()
     m_homeUrlRadioButton->setChecked(!GeneralSettings::rememberOpenedTabs());
     m_splitView->setChecked(GeneralSettings::splitView());
     m_filterBar->setChecked(GeneralSettings::filterBar());
+    m_filterAsYouType->setChecked(GeneralSettings::filterAsYouType());
     m_showFullPathInTitlebar->setChecked(GeneralSettings::showFullPathInTitlebar());
     m_openExternallyCalledFolderInNewTab->setChecked(GeneralSettings::openExternallyCalledFolderInNewTab());
 

@@ -21,6 +21,7 @@
 #include "search/bar.h"
 #include "selectionmode/topbar.h"
 #include "statusbar/dolphinstatusbar.h"
+#include "views/filterasyoutypeeventfilter.h"
 
 #include <KActionCollection>
 #include <KApplicationTrader>
@@ -40,6 +41,7 @@
 #include <QApplication>
 #include <QDesktopServices>
 #include <QDropEvent>
+#include <QKeyEvent>
 #include <QGridLayout>
 #include <QGuiApplication>
 #include <QRegularExpression>
@@ -108,10 +110,25 @@ DolphinViewContainer::DolphinViewContainer(const QUrl &url, QWidget *parent)
     // Initialize filter bar
     m_filterBar = new FilterBar(this);
     m_filterBar->setVisible(GeneralSettings::filterBar(), WithoutAnimation);
+    m_filterBar->setCloseOnEscape(GeneralSettings::filterAsYouType()); // If "filter as you type" is enabled then the filter bar closes immediately on pressing ESC.
 
     connect(m_filterBar, &FilterBar::filterChanged, this, &DolphinViewContainer::setNameFilter);
     connect(m_filterBar, &FilterBar::closeRequest, this, &DolphinViewContainer::closeFilterBar);
     connect(m_filterBar, &FilterBar::focusViewRequest, this, &DolphinViewContainer::requestFocus);
+
+    // Arrow-key navigation from filter bar into the view.
+    connect(m_filterBar, &FilterBar::navigateInViewRequested, this, [this](int key, Qt::KeyboardModifiers mods) {
+        if (!m_view) {
+            return;
+        }
+
+        QKeyEvent pressEvent(QEvent::KeyPress, key, mods);
+        QKeyEvent releaseEvent(QEvent::KeyRelease, key, mods);
+
+        // Send directly to the view — no focus change, so the user can keep typing
+        QApplication::sendEvent(m_view, &pressEvent);
+        QApplication::sendEvent(m_view, &releaseEvent);
+    });
 
     // Initialize the main view
     m_view = new DolphinView(url, this);
@@ -206,6 +223,19 @@ DolphinViewContainer::DolphinViewContainer(const QUrl &url, QWidget *parent)
     connect(placesModel, &KFilePlacesModel::dataChanged, this, &DolphinViewContainer::slotPlacesModelChanged);
     connect(placesModel, &KFilePlacesModel::rowsInserted, this, &DolphinViewContainer::slotPlacesModelChanged);
     connect(placesModel, &KFilePlacesModel::rowsRemoved, this, &DolphinViewContainer::slotPlacesModelChanged);
+
+    // Initialize filter-as-you-type.
+    m_filterAsYouType = new FilterAsYouTypeEventFilter(m_view, this);
+    m_filterAsYouType->setEnabled(GeneralSettings::filterAsYouType());
+    connect(m_filterAsYouType, &FilterAsYouTypeEventFilter::startFilteringRequested, this, [this](const QString &initialText) {
+        if (!isFilterBarVisible()) {
+            m_filterBar->setVisible(true, WithoutAnimation);
+            Q_EMIT showFilterBarChanged(true);
+        }
+
+        m_filterBar->appendToFilter(initialText);
+        m_filterBar->setFocus();
+    });
 
     QApplication::instance()->installEventFilter(this);
 }
@@ -539,6 +569,12 @@ void DolphinViewContainer::readSettings()
 
     m_view->readSettings();
     m_statusBar->readSettings();
+    if (m_filterAsYouType) {
+        m_filterAsYouType->setEnabled(GeneralSettings::filterAsYouType());
+    }
+    if (m_filterBar) {
+        m_filterBar->setCloseOnEscape(GeneralSettings::filterAsYouType());
+    }
 }
 
 bool DolphinViewContainer::isFilterBarVisible() const

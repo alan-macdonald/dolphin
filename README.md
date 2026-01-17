@@ -1,3 +1,8 @@
+# Changes
+
+- **Filter as you type**: When enabled in the settings (Interface > Folders & Tabs > Window > Filter as you type), this option makes key presses immediately filter files. It also amends the default behaviour of the ESC key when the filter bar has focus so that it immedately clears the filter and closes the filter bar.
+
+
 # Dolphin
 
 Dolphin is KDE's file manager that lets you navigate and browse the contents of your hard drives, USB sticks, SD cards, and more. Creating, moving, or deleting files and folders is simple and fast. See more information [on Dolphin's homepage](https://apps.kde.org/dolphin/).

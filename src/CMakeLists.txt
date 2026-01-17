@@ -346,6 +346,7 @@ target_sources(dolphinstatic PRIVATE
     statusbar/mountpointobservercache.cpp
     statusbar/spaceinfoobserver.cpp
     statusbar/statusbarspaceinfo.cpp
+    views/filterasyoutypeeventfilter.cpp
     views/zoomlevelinfo.cpp
     dolphindebug.cpp
     global.cpp
@@ -415,6 +416,7 @@ target_sources(dolphinstatic PRIVATE
     statusbar/mountpointobservercache.h
     statusbar/spaceinfoobserver.h
     statusbar/statusbarspaceinfo.h
+    views/filterasyoutypeeventfilter.h
     views/zoomlevelinfo.h
     dolphindebug.h
     global.h

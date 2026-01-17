@@ -65,6 +65,7 @@
 #include <QDropEvent>
 #include <QGraphicsOpacityEffect>
 #include <QGraphicsSceneDragDropEvent>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMenu>
 #include <QMimeDatabase>
@@ -614,6 +615,46 @@ void DolphinView::writeSettings()
 void DolphinView::setNameFilter(const QString &nameFilter)
 {
     m_model->setNameFilter(nameFilter);
+    ensureSelectionAfterFilter(nameFilter);
+}
+
+void DolphinView::ensureSelectionAfterFilter(const QString &nameFilter)
+{
+    if (!GeneralSettings::filterAsYouType()) {
+        return;
+    }
+
+    if (nameFilter.isEmpty()) {
+        return;
+    }
+
+    if (itemsCount() <= 0) {
+        return;
+    }
+
+    // If something is already selected (e.g. previously selected item still matches),
+    // don’t touch the selection.
+    if (!selectedItems().isEmpty()) {
+        return;
+    }
+
+    // At this point:
+    //   - the filter is non-empty,
+    //   - there are visible items,
+    //   - the selection is empty (likely because the previously selected item
+    //     was filtered out).
+    //
+    // Select the first visible item via the selection manager.
+
+    KItemListSelectionManager *selectionManager = m_container->controller()->selectionManager();
+    if (!selectionManager) {
+        return;
+    }
+
+    const int firstIndex = 0;
+
+    selectionManager->setCurrentItem(firstIndex);
+    selectionManager->setSelected(firstIndex, 1, KItemListSelectionManager::Select);
 }
 
 QString DolphinView::nameFilter() const

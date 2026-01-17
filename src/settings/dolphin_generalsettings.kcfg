@@ -162,6 +162,10 @@
             <label>Enable dynamic view</label>
             <default>false</default>
         </entry>
+        <entry name="FilterAsYouType" type="Bool">
+            <label>Filter as you type</label>
+            <default>false</default>
+        </entry>
     </group>
     <group name="Notification Messages">
         <entry name="ConfirmOpenManyFolders" type="Bool">

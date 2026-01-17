@@ -61,6 +61,7 @@ private:
 
     QCheckBox *m_splitView;
     QCheckBox *m_filterBar;
+    QCheckBox *m_filterAsYouType;
     QCheckBox *m_showFullPathInTitlebar;
     QCheckBox *m_openExternallyCalledFolderInNewTab;
     QCheckBox *m_useTabForSplitViewSwitch;

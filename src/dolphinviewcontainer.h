@@ -37,6 +37,7 @@ class Bar;
 }
 class DolphinStatusBar;
 class KFileItemList;
+class FilterAsYouTypeEventFilter;
 namespace SelectionMode
 {
 class TopBar;
@@ -233,6 +234,9 @@ public:
     void disableUrlNavigatorSelectionRequests();
     void enableUrlNavigatorSelectionRequests();
     void clearFilterBar();
+
+private:
+    FilterAsYouTypeEventFilter* m_filterAsYouType = nullptr;
 
 public Q_SLOTS:
     /**

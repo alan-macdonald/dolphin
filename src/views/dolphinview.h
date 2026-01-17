@@ -874,6 +874,11 @@ private Q_SLOTS:
 
     void slotTwoClicksRenamingTimerTimeout();
 
+    /*
+     * After filter has been applied, ensure a file is selected.
+     */
+    void ensureSelectionAfterFilter(const QString &nameFilter);
+
     void onDirectoryLoadingCompletedAfterJob();
 
 private:

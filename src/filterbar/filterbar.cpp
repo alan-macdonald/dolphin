@@ -11,6 +11,7 @@
 #include <KLocalizedString>
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLineEdit>
@@ -35,6 +36,7 @@ FilterBar::FilterBar(QWidget *parent)
     m_filterInput->setClearButtonEnabled(true);
     m_filterInput->setPlaceholderText(i18n("Filter…"));
     connect(m_filterInput, &QLineEdit::textChanged, this, &FilterBar::filterChanged);
+    m_filterInput->installEventFilter(this);
     setFocusProxy(m_filterInput);
 
     // Create close button
@@ -95,6 +97,63 @@ void FilterBar::slotToggleLockButton(bool checked)
     }
 }
 
+bool FilterBar::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == m_filterInput && event->type() == QEvent::KeyPress) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+
+        switch (keyEvent->key()) {
+            case Qt::Key_Escape:
+                if (m_closeOnEscape || m_filterInput->text().isEmpty()) {
+                    Q_EMIT closeRequest();
+                } else {
+                    m_filterInput->clear();
+                }
+                return true;
+
+            case Qt::Key_Enter:
+            case Qt::Key_Return:
+            case Qt::Key_Down:
+            case Qt::Key_PageDown:
+            case Qt::Key_Up:
+            case Qt::Key_PageUp: {
+                // 1) Ask the container to give focus to the view
+                Q_EMIT focusViewRequest();
+
+                // 2) Now the view (or its internal item view) should be the focus widget.
+                QWidget *target = QApplication::focusWidget();
+
+                // 3) Re-post the same key event to the view so it handles navigation/activation.
+                if (target && target != m_filterInput) {
+                    auto *forwarded = new QKeyEvent(
+                        keyEvent->type(),
+                        keyEvent->key(),
+                        keyEvent->modifiers(),
+                        keyEvent->text(),
+                        keyEvent->isAutoRepeat(),
+                        keyEvent->count());
+                    QApplication::postEvent(target, forwarded);
+
+                    m_filterInput->setFocus();
+                }
+
+                return true;
+            }
+
+            default:
+                break;
+        }
+    }
+
+    return AnimatedHeightWidget::eventFilter(watched, event);
+}
+
+void FilterBar::setCloseOnEscape(bool enabled)
+{
+    m_closeOnEscape = enabled;
+}
+
+
 void FilterBar::showEvent(QShowEvent *event)
 {
     if (!event->spontaneous()) {
@@ -105,36 +164,66 @@ void FilterBar::showEvent(QShowEvent *event)
 void FilterBar::keyPressEvent(QKeyEvent *event)
 {
     switch (event->key()) {
-    case Qt::Key_Escape:
-        if (m_filterInput->text().isEmpty()) {
-            Q_EMIT closeRequest();
-        } else {
-            m_filterInput->clear();
+        case Qt::Key_Escape:
+            if (m_closeOnEscape || m_filterInput->text().isEmpty()) {
+                Q_EMIT closeRequest();
+            } else {
+                m_filterInput->clear();
+            }
+            return;
+
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+        case Qt::Key_Down:
+        case Qt::Key_PageDown:
+        case Qt::Key_Up:
+        case Qt::Key_PageUp: {
+            Q_EMIT focusViewRequest();
+
+            QWidget *target = QApplication::focusWidget();
+            if (target && target != this && target != m_filterInput) {
+                auto *forwarded = new QKeyEvent(
+                    event->type(),
+                    event->key(),
+                    event->modifiers(),
+                    event->text(),
+                    event->isAutoRepeat(),
+                    event->count());
+                QApplication::postEvent(target, forwarded);
+            }
+
+            m_filterInput->setFocus();
+            return;
         }
-        return;
 
-    case Qt::Key_Enter:
-    case Qt::Key_Return:
-        Q_EMIT focusViewRequest();
-        return;
-
-    case Qt::Key_Down:
-    case Qt::Key_PageDown:
-    case Qt::Key_Up:
-    case Qt::Key_PageUp: {
-        Q_EMIT focusViewRequest();
-        QWidget *focusWidget = QApplication::focusWidget();
-        if (focusWidget && focusWidget != this) {
-            QApplication::sendEvent(focusWidget, event);
-        }
-        return;
-    }
-
-    default:
-        break;
+        default:
+            break;
     }
 
     QWidget::keyPressEvent(event);
+}
+
+
+void FilterBar::appendToFilter(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Find the line edit that actually holds the filter text.
+    // Prefer a direct member if you have one; otherwise, locate it safely.
+    QLineEdit* lineEdit = findChild<QLineEdit*>();
+    if (!lineEdit) {
+        return;
+    }
+
+    // If the user has selected all (common when the bar opens), replace selection.
+    // Otherwise append.
+    if (lineEdit->hasSelectedText() && lineEdit->selectedText() == lineEdit->text()) {
+        lineEdit->clear();
+    }
+
+    lineEdit->insert(text);
 }
 
 int FilterBar::preferredHeight() const
